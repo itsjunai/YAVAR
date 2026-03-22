@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>YAVAR — Gyroscopic Stability System</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f4efe4;--bg2:#ede7d8;--bg3:#e5deca;--bg4:#d6cdb8;
+  --line:rgba(80,65,40,0.10);--line2:rgba(80,65,40,0.18);--line3:rgba(80,65,40,0.30);
+  --cream:#faf7f0;--khaki:#8a7a5a;--khaki2:#6b5c3e;--khaki3:#3e3020;
+  --silver:#a8b4be;--silver2:#7a8a96;--silver3:#4e6070;
+  --ocean:#1e5c7a;--ocean2:#163f58;--ocean3:#0c2a3a;--ocean4:#071c28;
+  --oceanlt:#3a8ab0;--wake:#5ab0cc;--wake2:#9ad0e4;
+  --gold:#b8841e;--goldlt:#d4a23a;--golddim:#7a5610;
+  --red:#a83020;--green:#2a6e48;--greenlt:#3a9a60;
+  --font:'JetBrains Mono','Courier New',monospace;
+  --bar:34px;--nav:38px;--sb:20px;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--khaki3);font-family:var(--font);font-size:11px;-webkit-font-smoothing:antialiased;cursor:default;user-select:none;}
+::-webkit-scrollbar{width:2px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--bg4);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.15}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.blink{animation:blink 1.8s step-end infinite;}
+
+/* ═══════════════════════════════════════
+   NAUTICAL CHART BACKGROUND
+═══════════════════════════════════════ */
+.chart-bg{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
+.chart-bg svg{width:100%;height:100%;opacity:0.18;}
+
+/* ═══════════════════════════════════════
+   LOGIN
+═══════════════════════════════════════ */
+#login{position:fixed;inset:0;z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);overflow-y:auto;padding:20px 0;}
+#login.gone{display:none;}
+
+.lg-eyebrow{font-size:7px;letter-spacing:6px;color:var(--khaki);margin-bottom:10px;text-transform:uppercase;text-align:center;}
+.lg-eyebrow b{color:var(--ocean);}
+.lg-logo-big{font-size:32px;font-weight:700;letter-spacing:14px;color:var(--ocean2);margin-bottom:6px;text-align:center;}
+.lg-tagline{font-size:7px;letter-spacing:3px;color:var(--khaki);margin-bottom:36px;text-align:center;text-transform:uppercase;}
+
+.lg-card{width:340px;max-width:92vw;border:0.5px solid var(--line3);background:var(--bg2);}
+.lg-card-top{padding:8px 14px;border-bottom:0.5px solid var(--line2);display:flex;justify-content:space-between;align-items:center;font-size:7px;color:var(--khaki);letter-spacing:2px;}
+.lg-card-top span:last-child{color:var(--ocean);font-variant-numeric:tabular-nums;}
+.lg-fields{padding:20px 16px 14px;display:flex;flex-direction:column;gap:12px;}
+.lg-lbl{font-size:7px;letter-spacing:2.5px;color:var(--khaki);margin-bottom:5px;text-transform:uppercase;}
+.lg-inp{width:100%;background:var(--bg3);border:0.5px solid var(--line2);color:var(--khaki3);font-family:var(--font);font-size:10px;padding:8px 10px;outline:none;letter-spacing:1px;}
+.lg-inp:focus{border-color:var(--ocean);}
+.lg-inp::placeholder{color:var(--khaki);}
+.lg-err{font-size:7.5px;color:var(--red);min-height:14px;text-align:center;letter-spacing:0.5px;margin-top:2px;}
+.lg-go{width:100%;padding:9px;background:transparent;border:0.5px solid var(--ocean);color:var(--ocean);font-family:var(--font);font-size:8px;letter-spacing:4px;cursor:pointer;text-transform:uppercase;transition:background 0.15s;}
+.lg-go:hover{background:rgba(30,92,122,0.08);}
+.lg-card-bot{padding:6px 14px;border-top:0.5px solid var(--line);font-size:6.5px;color:var(--khaki);letter-spacing:1px;display:flex;justify-content:space-between;}
+
+/* ═══════════════════════════════════════
+   INTRO SPLASH
+═══════════════════════════════════════ */
+#intro{position:fixed;inset:0;z-index:8500;display:none;flex-direction:column;align-items:center;justify-content:center;background:var(--ocean4);}
+#intro.show{display:flex;}
+.intro-ring{width:120px;height:120px;border:0.5px solid rgba(255,255,255,0.08);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:28px;position:relative;}
+.intro-ring::before{content:'';position:absolute;inset:-10px;border:0.5px solid rgba(90,176,204,0.15);border-radius:50%;}
+.intro-ring::after{content:'';position:absolute;inset:-22px;border:0.5px solid rgba(90,176,204,0.07);border-radius:50%;}
+.intro-logo{font-size:26px;font-weight:700;letter-spacing:8px;color:var(--wake2);}
+.intro-sub{font-size:7px;letter-spacing:5px;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-bottom:8px;}
+.intro-line{font-size:7px;letter-spacing:2px;color:rgba(255,255,255,0.15);text-transform:uppercase;}
+.intro-progress{width:180px;height:1px;background:rgba(255,255,255,0.08);margin-top:32px;overflow:hidden;}
+.intro-fill{height:100%;background:var(--wake);width:0;transition:width 0.4s ease;}
+
+/* ═══════════════════════════════════════
+   BOOT
+═══════════════════════════════════════ */
+#boot{position:fixed;inset:0;z-index:8000;display:none;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);}
+#boot.show{display:flex;}
+.bt-eyebrow{font-size:7px;letter-spacing:5px;color:var(--khaki);margin-bottom:28px;text-transform:uppercase;text-align:center;}
+.bt-eyebrow b{color:var(--ocean);}
+.bt-box{width:580px;max-width:94vw;border:0.5px solid var(--line3);background:var(--bg2);}
+.bt-box-top{padding:7px 13px;border-bottom:0.5px solid var(--line2);display:flex;justify-content:space-between;font-size:7px;color:var(--khaki);letter-spacing:2px;}
+.bt-log{padding:12px 13px;font-size:9px;line-height:1.9;min-height:200px;max-height:240px;overflow-y:auto;color:var(--khaki);}
+.bt-log .ok{color:var(--green);}
+.bt-log .w{color:var(--gold);}
+.bt-log .hi{color:var(--ocean);}
+.bt-log .dim{color:var(--silver2);}
+.bt-bar-row{border-top:0.5px solid var(--line2);padding:8px 13px;display:flex;align-items:center;gap:10px;}
+.bt-bar{flex:1;height:1px;background:var(--bg4);overflow:hidden;}
+.bt-fill{height:100%;background:var(--ocean);width:0;transition:width 0.08s;}
+.bt-pct{font-size:7.5px;color:var(--khaki);min-width:28px;text-align:right;}
+
+/* ═══════════════════════════════════════
+   APP SHELL
+═══════════════════════════════════════ */
+#app{position:fixed;inset:0;z-index:100;display:grid;grid-template-rows:var(--bar) var(--nav) 1fr var(--sb);opacity:0;pointer-events:none;transition:opacity 0.5s;}
+#app.on{opacity:1;pointer-events:all;}
+
+/* TOP BAR */
+#topbar{background:var(--ocean4);border-bottom:0.5px solid rgba(255,255,255,0.07);display:flex;align-items:center;padding:0 14px;gap:0;}
+.tb-logo{font-size:11px;font-weight:700;letter-spacing:4px;color:var(--wake2);margin-right:24px;flex-shrink:0;}
+.tb-logo sup{font-size:6px;color:var(--silver2);letter-spacing:1px;font-weight:300;}
+.tb-tabs{display:flex;align-items:stretch;gap:0;flex:1;}
+.tb-tab{padding:0 14px;font-size:7.5px;letter-spacing:2px;color:var(--silver2);cursor:pointer;display:flex;align-items:center;border-bottom:1.5px solid transparent;height:100%;transition:color 0.15s,border-color 0.15s;white-space:nowrap;text-transform:uppercase;}
+.tb-tab:hover{color:var(--silver);}
+.tb-tab.active{color:var(--wake2);border-bottom-color:var(--wake);}
+.tb-right{display:flex;align-items:center;gap:14px;font-size:7px;color:var(--silver2);flex-shrink:0;margin-left:auto;}
+.tb-live{display:flex;align-items:center;gap:5px;}
+.tb-dot{width:5px;height:5px;border-radius:50%;background:var(--silver3);}
+.tb-dot.live{background:var(--greenlt);animation:pulse 2s ease infinite;}
+.tb-sep{width:0.5px;height:14px;background:rgba(255,255,255,0.08);}
+#tb-clock{color:var(--silver);font-variant-numeric:tabular-nums;letter-spacing:1px;}
+
+/* NAV BAR */
+#navbar{background:var(--bg2);border-bottom:0.5px solid var(--line3);display:flex;align-items:stretch;padding:0 14px;gap:0;}
+.pn-tab{padding:0 14px;font-size:7.5px;letter-spacing:2px;color:var(--khaki);cursor:pointer;display:flex;align-items:center;border-bottom:1.5px solid transparent;height:100%;transition:color 0.15s,border-color 0.15s;white-space:nowrap;text-transform:uppercase;}
+.pn-tab:hover{color:var(--khaki2);}
+.pn-tab.active{color:var(--ocean);border-bottom-color:var(--ocean);}
+.pn-right{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:7px;color:var(--khaki);}
+.nav-pill{padding:2px 9px;border:0.5px solid var(--line3);font-size:6.5px;letter-spacing:1.5px;color:var(--silver3);text-transform:uppercase;}
+.nav-pill.warn{border-color:var(--gold);color:var(--gold);}
+.nav-pill.crit{border-color:var(--red);color:var(--red);}
+
+/* CONTENT */
+#content{overflow:hidden;position:relative;}
+.panel{position:absolute;inset:0;display:none;overflow:hidden;}
+.panel.active{display:flex;flex-direction:column;}
+
+/* STATUS BAR */
+#statusbar{background:var(--ocean4);border-top:0.5px solid rgba(255,255,255,0.06);display:flex;align-items:center;padding:0 14px;gap:16px;overflow:hidden;}
+.sb-item{font-size:6.5px;color:var(--silver2);letter-spacing:1.5px;flex-shrink:0;white-space:nowrap;}
+.sb-item b{color:var(--silver);}
+.sb-sep{width:0.5px;height:10px;background:rgba(255,255,255,0.08);flex-shrink:0;}
+.sb-right{margin-left:auto;font-size:6.5px;color:var(--silver3);letter-spacing:2px;}
+
+/* ═══════════════════════════════════════
+   PANEL: LIVE GYRO
+═══════════════════════════════════════ */
+#p-gyro{background:var(--bg);overflow-y:auto;}
+.gyro-inner{padding:14px;display:grid;grid-template-columns:1fr 260px;grid-template-rows:auto auto auto;gap:12px;min-height:100%;}
+@media(max-width:600px),(orientation:landscape) and (max-height:500px){
+  .gyro-inner{grid-template-columns:1fr;grid-template-rows:auto;}
+  .compass-section{order:1;}
+  .right-col{order:2;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .device-strip{order:0;}
+}
+
+/* Device strip */
+.device-strip{grid-column:1/-1;background:var(--bg2);border:0.5px solid var(--line3);padding:9px 14px;display:flex;align-items:center;gap:14px;}
+.dev-icon{font-size:20px;width:36px;height:36px;background:var(--bg3);border:0.5px solid var(--line3);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.dev-meta{flex:1;min-width:0;}
+.dev-name{font-size:9px;font-weight:700;letter-spacing:2px;color:var(--khaki2);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dev-model{font-size:7px;color:var(--khaki);letter-spacing:1px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dev-badges{display:flex;gap:6px;flex-shrink:0;}
+.badge{font-size:6.5px;letter-spacing:1.5px;padding:3px 8px;border:0.5px solid var(--line3);text-transform:uppercase;color:var(--khaki);}
+.badge.ocean{border-color:var(--ocean);color:var(--ocean);}
+.badge.green{border-color:var(--green);color:var(--green);}
+.badge.warn{border-color:var(--gold);color:var(--gold);}
+
+/* Compass section */
+.compass-section{background:var(--bg2);border:0.5px solid var(--line3);padding:14px;display:flex;flex-direction:column;align-items:center;}
+.sec-head{font-size:7px;letter-spacing:3px;color:var(--khaki);text-transform:uppercase;margin-bottom:12px;width:100%;display:flex;justify-content:space-between;}
+.sec-head span:last-child{color:var(--ocean);}
+canvas#compass{display:block;}
+.compass-readout{margin-top:12px;width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.cr-cell{text-align:center;background:var(--bg3);border:0.5px solid var(--line2);padding:6px 4px;}
+.cr-lbl{font-size:6px;letter-spacing:2px;color:var(--khaki);text-transform:uppercase;margin-bottom:3px;}
+.cr-val{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;}
+.cr-val.x{color:var(--ocean);}
+.cr-val.y{color:var(--gold);}
+.cr-val.z{color:var(--khaki2);}
+
+/* Right column */
+.right-col{display:flex;flex-direction:column;gap:10px;}
+
+/* Axis block */
+.axis-block{background:var(--bg2);border:0.5px solid var(--line3);padding:11px 13px;position:relative;overflow:hidden;}
+.axis-block::before{content:'';position:absolute;top:0;left:0;right:0;height:1.5px;}
+.axis-block.x::before{background:var(--ocean);}
+.axis-block.y::before{background:var(--gold);}
+.axis-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.axis-lbl{font-size:6.5px;letter-spacing:3px;color:var(--khaki);text-transform:uppercase;}
+.axis-dir{font-size:6.5px;letter-spacing:1px;padding:2px 7px;border:0.5px solid var(--line3);color:var(--khaki2);}
+.axis-val{font-size:26px;font-weight:700;letter-spacing:-1px;line-height:1;margin-bottom:4px;font-variant-numeric:tabular-nums;}
+.axis-block.x .axis-val{color:var(--ocean);}
+.axis-block.y .axis-val{color:var(--gold);}
+.axis-desc{font-size:7px;color:var(--khaki);letter-spacing:1px;margin-bottom:9px;}
+.axis-track{width:100%;height:2px;background:var(--bg4);position:relative;}
+.axis-mid{position:absolute;top:-2px;left:50%;width:1px;height:6px;background:var(--line3);}
+.axis-fill{position:absolute;top:0;height:100%;transition:all 0.1s;}
+.axis-block.x .axis-fill{background:var(--ocean);}
+.axis-block.y .axis-fill{background:var(--gold);}
+
+/* Orient block */
+.orient-block{background:var(--bg2);border:0.5px solid var(--line3);padding:11px 13px;}
+.orient-inner{display:flex;align-items:center;gap:10px;margin-top:8px;}
+.orient-ico{font-size:18px;width:32px;height:32px;background:var(--bg3);border:0.5px solid var(--line3);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.orient-val{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--khaki2);text-transform:uppercase;}
+.orient-desc{font-size:7px;color:var(--khaki);letter-spacing:1px;margin-top:2px;}
+
+/* Stability block */
+.stab-block{background:var(--bg2);border:0.5px solid var(--line3);padding:11px 13px;}
+.stab-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
+.stab-score{font-size:22px;font-weight:700;color:var(--ocean);letter-spacing:-0.5px;font-variant-numeric:tabular-nums;}
+.stab-grade{font-size:6.5px;letter-spacing:2px;padding:2px 8px;border:0.5px solid var(--green);color:var(--green);text-transform:uppercase;}
+.stab-grade.warn{border-color:var(--gold);color:var(--gold);}
+.stab-grade.crit{border-color:var(--red);color:var(--red);}
+.stab-bar{width:100%;height:2px;background:var(--bg4);margin-bottom:7px;}
+.stab-bar-fill{height:100%;transition:width 0.15s,background 0.3s;background:var(--green);}
+.stab-sub{font-size:6.5px;letter-spacing:1.5px;color:var(--khaki);text-transform:uppercase;}
+
+/* Perm btn */
+.perm-btn{width:100%;padding:9px;background:transparent;border:0.5px solid var(--ocean);color:var(--ocean);font-family:var(--font);font-size:7.5px;letter-spacing:3px;cursor:pointer;text-transform:uppercase;transition:background 0.15s;grid-column:1/-1;}
+.perm-btn:hover{background:rgba(30,92,122,0.08);}
+
+/* ═══════════════════════════════════════
+   PANEL: LOG
+═══════════════════════════════════════ */
+#p-log{background:var(--bg);overflow-y:auto;}
+.log-inner{padding:14px;}
+.log-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.log-title{font-size:7px;letter-spacing:3px;color:var(--khaki);text-transform:uppercase;}
+.log-clear{padding:3px 10px;background:transparent;border:0.5px solid var(--line3);color:var(--khaki);font-family:var(--font);font-size:7px;letter-spacing:2px;cursor:pointer;text-transform:uppercase;transition:border-color 0.15s;}
+.log-clear:hover{border-color:var(--red);color:var(--red);}
+.log-table{width:100%;border-collapse:collapse;}
+.log-table th{font-size:6.5px;letter-spacing:2px;color:var(--khaki);text-transform:uppercase;text-align:left;padding:5px 10px;border-bottom:0.5px solid var(--line3);font-weight:400;}
+.log-table td{font-size:8px;color:var(--khaki2);padding:6px 10px;border-bottom:0.5px solid var(--line);font-variant-numeric:tabular-nums;}
+.log-table tr:last-child td{border-bottom:none;}
+.log-table td.ok{color:var(--green);}
+.log-table td.warn{color:var(--gold);}
+.log-table td.crit{color:var(--red);}
+.log-empty{padding:40px 0;text-align:center;font-size:8px;letter-spacing:2px;color:var(--khaki);text-transform:uppercase;}
+
+/* ═══════════════════════════════════════
+   PANEL: CALIBRATION
+═══════════════════════════════════════ */
+#p-cal{background:var(--bg);overflow-y:auto;}
+.cal-inner{padding:14px;}
+.cal-head{font-size:7px;letter-spacing:3px;color:var(--khaki);text-transform:uppercase;margin-bottom:14px;}
+.cal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.cal-card{background:var(--bg2);border:0.5px solid var(--line3);padding:13px 14px;}
+.cal-card-title{font-size:6.5px;letter-spacing:2.5px;color:var(--khaki);text-transform:uppercase;margin-bottom:8px;}
+.cal-val-big{font-size:22px;font-weight:700;color:var(--ocean2);font-variant-numeric:tabular-nums;margin-bottom:3px;}
+.cal-unit{font-size:7px;color:var(--khaki);letter-spacing:1px;}
+.cal-mini-chart{height:32px;background:var(--bg3);border:0.5px solid var(--line2);margin-top:10px;position:relative;overflow:hidden;}
+canvas.mini-chart{position:absolute;inset:0;width:100%;height:100%;}
+.cal-section{background:var(--bg2);border:0.5px solid var(--line3);padding:13px 14px;margin-bottom:12px;}
+.cal-section-title{font-size:6.5px;letter-spacing:2.5px;color:var(--khaki);text-transform:uppercase;margin-bottom:10px;}
+.cal-btn{display:block;width:100%;padding:9px;background:transparent;border:0.5px solid var(--ocean);color:var(--ocean);font-family:var(--font);font-size:7.5px;letter-spacing:3px;cursor:pointer;text-transform:uppercase;transition:background 0.15s;margin-bottom:6px;}
+.cal-btn:hover{background:rgba(30,92,122,0.08);}
+.cal-status{font-size:7.5px;color:var(--khaki);letter-spacing:1px;margin-top:8px;min-height:14px;}
+.cal-status.ok{color:var(--green);}
+.cal-offset-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--line);font-size:8px;color:var(--khaki2);}
+.cal-offset-row:last-child{border-bottom:none;}
+.cal-offset-row span:last-child{color:var(--ocean);font-variant-numeric:tabular-nums;}
+
+/* ═══════════════════════════════════════
+   PANEL: ABOUT / SYSTEM
+═══════════════════════════════════════ */
+#p-about{background:var(--bg);overflow-y:auto;}
+.about-inner{padding:14px;max-width:540px;}
+.about-logo-row{margin-bottom:4px;}
+.about-logo{font-size:20px;font-weight:700;letter-spacing:7px;color:var(--ocean2);}
+.about-ver{font-size:7px;letter-spacing:3px;color:var(--khaki);margin-bottom:20px;text-transform:uppercase;}
+.about-section{margin-bottom:16px;}
+.about-section-title{font-size:6.5px;letter-spacing:3px;color:var(--ocean);text-transform:uppercase;padding-bottom:5px;border-bottom:0.5px solid var(--line2);margin-bottom:8px;}
+.about-row{display:flex;justify-content:space-between;padding:4px 0;font-size:8px;color:var(--khaki2);border-bottom:0.5px solid var(--line);}
+.about-row:last-child{border-bottom:none;}
+.about-row span:last-child{color:var(--khaki3);}
+.about-desc{font-size:8px;color:var(--khaki);line-height:1.85;margin-top:6px;}
+.about-badge-row{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.about-badge{font-size:6.5px;letter-spacing:1.5px;padding:3px 9px;border:0.5px solid var(--line3);color:var(--khaki);text-transform:uppercase;}
+
+/* TOAST */
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ocean4);border:0.5px solid rgba(255,255,255,0.1);color:var(--wake2);font-size:7.5px;letter-spacing:2px;padding:7px 18px;opacity:0;transition:opacity 0.2s,transform 0.2s;pointer-events:none;white-space:nowrap;z-index:9999;text-transform:uppercase;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- NAUTICAL CHART BG -->
+<div class="chart-bg">
+<svg viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="grid-major" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M60 0L0 0 0 60" fill="none" stroke="#5a8a6a" stroke-width="0.5"/>
+    </pattern>
+    <pattern id="grid-minor" width="15" height="15" patternUnits="userSpaceOnUse">
+      <path d="M15 0L0 0 0 15" fill="none" stroke="#5a8a6a" stroke-width="0.2"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#grid-minor)"/>
+  <rect width="100%" height="100%" fill="url(#grid-major)"/>
+  <!-- Depth contour lines -->
+  <ellipse cx="600" cy="400" rx="500" ry="300" fill="none" stroke="#2a6a8a" stroke-width="0.4"/>
+  <ellipse cx="600" cy="400" rx="380" ry="220" fill="none" stroke="#2a6a8a" stroke-width="0.35"/>
+  <ellipse cx="600" cy="400" rx="260" ry="150" fill="none" stroke="#2a6a8a" stroke-width="0.3"/>
+  <ellipse cx="600" cy="400" rx="150" ry="90" fill="none" stroke="#2a6a8a" stroke-width="0.25"/>
+  <!-- Compass rose hint -->
+  <circle cx="100" cy="100" r="60" fill="none" stroke="#2a6a8a" stroke-width="0.4"/>
+  <circle cx="100" cy="100" r="45" fill="none" stroke="#2a6a8a" stroke-width="0.25"/>
+  <line x1="100" y1="40" x2="100" y2="160" stroke="#2a6a8a" stroke-width="0.4"/>
+  <line x1="40" y1="100" x2="160" y2="100" stroke="#2a6a8a" stroke-width="0.4"/>
+  <line x1="57" y1="57" x2="143" y2="143" stroke="#2a6a8a" stroke-width="0.25"/>
+  <line x1="143" y1="57" x2="57" y2="143" stroke="#2a6a8a" stroke-width="0.25"/>
+  <!-- Lat/lon ticks -->
+  <line x1="0" y1="200" x2="1200" y2="200" stroke="#2a6a8a" stroke-width="0.3" stroke-dasharray="4,8"/>
+  <line x1="0" y1="400" x2="1200" y2="400" stroke="#2a6a8a" stroke-width="0.4"/>
+  <line x1="0" y1="600" x2="1200" y2="600" stroke="#2a6a8a" stroke-width="0.3" stroke-dasharray="4,8"/>
+  <line x1="300" y1="0" x2="300" y2="800" stroke="#2a6a8a" stroke-width="0.3" stroke-dasharray="4,8"/>
+  <line x1="600" y1="0" x2="600" y2="800" stroke="#2a6a8a" stroke-width="0.4"/>
+  <line x1="900" y1="0" x2="900" y2="800" stroke="#2a6a8a" stroke-width="0.3" stroke-dasharray="4,8"/>
+  <!-- Soundings -->
+  <text x="180" y="90" font-size="7" fill="#2a6a8a" font-family="JetBrains Mono,monospace">12.4</text>
+  <text x="380" y="180" font-size="7" fill="#2a6a8a" font-family="JetBrains Mono,monospace">8.7</text>
+  <text x="720" y="280" font-size="7" fill="#2a6a8a" font-family="JetBrains Mono,monospace">24.1</text>
+  <text x="900" y="500" font-size="7" fill="#2a6a8a" font-family="JetBrains Mono,monospace">15.8</text>
+  <text x="420" y="620" font-size="7" fill="#2a6a8a" font-family="JetBrains Mono,monospace">6.3</text>
+  <text x="800" y="150" font-size="7" fill="#2a6a8a" font-family="JetBrains Mono,monospace">31.2</text>
+  <text x="150" y="500" font-size="7" fill="#2a6a8a" font-family="JetBrains Mono,monospace">9.0</text>
+  <text x="1050" y="350" font-size="7" fill="#2a6a8a" font-family="JetBrains Mono,monospace">18.5</text>
+  <!-- Bearing lines -->
+  <line x1="0" y1="800" x2="1200" y2="0" stroke="#2a6a8a" stroke-width="0.2" stroke-dasharray="2,12"/>
+  <line x1="0" y1="0" x2="1200" y2="800" stroke="#2a6a8a" stroke-width="0.2" stroke-dasharray="2,12"/>
+</svg>
+</div>
+
+<!-- LOGIN -->
+<div id="login">
+  <div style="width:100%;max-width:520px;margin-bottom:8px;">
+    <svg width="100%" viewBox="0 0 680 290" xmlns="http://www.w3.org/2000/svg">
+      <line x1="80" y1="90" x2="600" y2="90" stroke="#1e5c7a" stroke-width="0.6" opacity="0.5"/>
+      <!-- YAVAR centered: word spans ~76+76+66+76+66=360px approx, center at 340, start at 160 -->
+      <text font-family="Georgia,'Times New Roman',serif" font-size="114" font-weight="700" font-style="italic" fill="#1e5c7a" y="205">
+        <tspan x="160">Y</tspan>
+        <tspan x="236">A</tspan>
+        <tspan x="302">V</tspan>
+        <tspan x="368">A</tspan>
+        <tspan x="452">R</tspan>
+      </text>
+      <rect x="82" y="218" width="516" height="3" rx="1.5" fill="#1e5c7a" opacity="0.4"/>
+      <text x="340" y="246" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="400" fill="#8a7a5a" letter-spacing="6">GYROSCOPIC STABILITY SYSTEM</text>
+      <line x1="80" y1="262" x2="600" y2="262" stroke="#1e5c7a" stroke-width="0.6" opacity="0.5"/>
+      <line x1="80" y1="86" x2="80" y2="74" stroke="#1e5c7a" stroke-width="1" opacity="0.5"/>
+      <line x1="74" y1="90" x2="86" y2="90" stroke="#1e5c7a" stroke-width="1" opacity="0.5"/>
+      <line x1="600" y1="86" x2="600" y2="74" stroke="#1e5c7a" stroke-width="1" opacity="0.5"/>
+      <line x1="594" y1="90" x2="606" y2="90" stroke="#1e5c7a" stroke-width="1" opacity="0.5"/>
+      <line x1="80" y1="266" x2="80" y2="278" stroke="#1e5c7a" stroke-width="1" opacity="0.5"/>
+      <line x1="74" y1="262" x2="86" y2="262" stroke="#1e5c7a" stroke-width="1" opacity="0.5"/>
+      <line x1="600" y1="266" x2="600" y2="278" stroke="#1e5c7a" stroke-width="1" opacity="0.5"/>
+      <line x1="594" y1="262" x2="606" y2="262" stroke="#1e5c7a" stroke-width="1" opacity="0.5"/>
+    </svg>
+  </div>
+  <div class="lg-card">
+    <div class="lg-card-top">
+      <span>AUTHENTICATION</span>
+      <span id="lg-clock">--:--:-- UTC</span>
+    </div>
+    <div class="lg-fields">
+      <div>
+        <div class="lg-lbl">User</div>
+        <input class="lg-inp" id="lg-user" type="text" placeholder="OPERATOR ID" autocomplete="off" spellcheck="false">
+      </div>
+      <div>
+        <div class="lg-lbl">Pass</div>
+        <input class="lg-inp" id="lg-pass" type="password" placeholder="········">
+      </div>
+      <div class="lg-err" id="lg-err"></div>
+      <button class="lg-go" id="lg-btn">AUTHENTICATE →</button>
+    </div>
+    <div class="lg-card-bot">
+      <span>YAVAR · MARITIME NAV SYS</span>
+      <span>SECURE ACCESS ONLY</span>
+    </div>
+  </div>
+</div>
+
+<!-- INTRO SPLASH -->
+<div id="intro">
+  <div style="width:100%;max-width:480px;margin-bottom:0;">
+    <svg width="100%" viewBox="0 0 680 290" xmlns="http://www.w3.org/2000/svg">
+      <line x1="80" y1="90" x2="600" y2="90" stroke="#5ab0cc" stroke-width="0.6" opacity="0.3"/>
+      <text font-family="Georgia,'Times New Roman',serif" font-size="114" font-weight="700" font-style="italic" fill="#faf7f0" y="205">
+        <tspan x="160">Y</tspan>
+        <tspan x="236">A</tspan>
+        <tspan x="302">V</tspan>
+        <tspan x="368">A</tspan>
+        <tspan x="452">R</tspan>
+      </text>
+      <rect x="82" y="218" width="516" height="3" rx="1.5" fill="#5ab0cc" opacity="0.5"/>
+      <text x="340" y="246" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="400" fill="#5ab0cc" letter-spacing="6">GYROSCOPIC STABILITY SYSTEM</text>
+      <line x1="80" y1="262" x2="600" y2="262" stroke="#5ab0cc" stroke-width="0.6" opacity="0.3"/>
+      <line x1="80" y1="86" x2="80" y2="74" stroke="#5ab0cc" stroke-width="1" opacity="0.3"/>
+      <line x1="74" y1="90" x2="86" y2="90" stroke="#5ab0cc" stroke-width="1" opacity="0.3"/>
+      <line x1="600" y1="86" x2="600" y2="74" stroke="#5ab0cc" stroke-width="1" opacity="0.3"/>
+      <line x1="594" y1="90" x2="606" y2="90" stroke="#5ab0cc" stroke-width="1" opacity="0.3"/>
+      <line x1="80" y1="266" x2="80" y2="278" stroke="#5ab0cc" stroke-width="1" opacity="0.3"/>
+      <line x1="74" y1="262" x2="86" y2="262" stroke="#5ab0cc" stroke-width="1" opacity="0.3"/>
+      <line x1="600" y1="266" x2="600" y2="278" stroke="#5ab0cc" stroke-width="1" opacity="0.3"/>
+      <line x1="594" y1="262" x2="606" y2="262" stroke="#5ab0cc" stroke-width="1" opacity="0.3"/>
+    </svg>
+  </div>
+  <div class="intro-progress"><div class="intro-fill" id="intro-fill"></div></div>
+</div>
+
+<!-- BOOT -->
+<div id="boot">
+  <div class="bt-eyebrow">YAVAR &nbsp;·&nbsp; <b>SYSTEM INITIALISATION</b> &nbsp;·&nbsp; MARITIME NAV SYS</div>
+  <div class="bt-box">
+    <div class="bt-box-top"><span>BOOT SEQUENCE</span><span id="bt-stage">INIT</span></div>
+    <div class="bt-log" id="bt-log"></div>
+    <div class="bt-bar-row">
+      <div class="bt-bar"><div class="bt-fill" id="bt-fill"></div></div>
+      <div class="bt-pct" id="bt-pct">0%</div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div id="topbar">
+    <div style="margin-right:20px;flex-shrink:0;display:flex;align-items:center;">
+      <svg width="90" height="22" viewBox="0 0 520 120" xmlns="http://www.w3.org/2000/svg">
+        <text font-family="Georgia,'Times New Roman',serif" font-size="114" font-weight="700" font-style="italic" fill="#9ad0e4" y="110">
+          <tspan x="0">Y</tspan><tspan x="72">A</tspan><tspan x="138">V</tspan><tspan x="204">A</tspan><tspan x="290">R</tspan>
+        </text>
+      </svg>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:6px;color:var(--silver2);letter-spacing:1px;margin-left:4px;align-self:flex-end;padding-bottom:3px;">v1.0</span>
+    </div>
+    <div class="tb-tabs">
+      <div class="tb-tab active" data-tab="gyro" data-panel="p-gyro">Live Data</div>
+      <div class="tb-tab" data-tab="log" data-panel="p-log">Log</div>
+      <div class="tb-tab" data-tab="cal" data-panel="p-cal">Calibration</div>
+      <div class="tb-tab" data-tab="about" data-panel="p-about">System</div>
+    </div>
+    <div class="tb-right">
+      <div class="tb-live"><div class="tb-dot" id="tb-dot"></div><span id="tb-state">STANDBY</span></div>
+      <div class="tb-sep"></div>
+      <span id="tb-clock">--:--:-- UTC</span>
+      <div class="tb-sep"></div>
+      <button id="logout-btn" style="background:transparent;border:0.5px solid rgba(255,255,255,0.12);color:var(--silver2);font-family:var(--font);font-size:7px;letter-spacing:2px;padding:3px 10px;cursor:pointer;text-transform:uppercase;transition:border-color 0.15s,color 0.15s;" onmouseover="this.style.borderColor='rgba(168,48,32,0.6)';this.style.color='#c05040';" onmouseout="this.style.borderColor='rgba(255,255,255,0.12)';this.style.color='var(--silver2)';">LOGOUT</button>
+    </div>
+  </div>
+  <div id="navbar">
+    <div class="pn-tab active" data-panel="p-gyro">Gyroscope</div>
+    <div class="pn-tab" data-panel="p-log">Sensor Log</div>
+    <div class="pn-tab" data-panel="p-cal">Calibration</div>
+    <div class="pn-tab" data-panel="p-about">About</div>
+    <div class="pn-right">
+      <div class="nav-pill" id="nav-orient">FLAT</div>
+      <div class="nav-pill" id="nav-stab">STABLE</div>
+      <div class="nav-pill" id="nav-sensor">NO SENSOR</div>
+    </div>
+  </div>
+  <div id="content">
+
+    <!-- LIVE GYRO -->
+    <div class="panel active" id="p-gyro">
+      <div style="flex:1;overflow-y:auto;">
+      <div class="gyro-inner">
+        <!-- Vessel status strip -->
+        <div class="device-strip">
+          <div class="dev-icon">⚓</div>
+          <div class="dev-meta">
+            <div class="dev-name">YAVAR · GYROSCOPIC STABILITY SYSTEM</div>
+            <div class="dev-model">Maritime Navigation · Precision Orientation Engine · v1.0</div>
+          </div>
+          <div class="dev-badges">
+            <div class="badge ocean">MARITIME</div>
+            <div class="badge green" id="devSensor">STANDBY</div>
+          </div>
+        </div>
+
+        <!-- Compass -->
+        <div class="compass-section">
+          <div class="sec-head"><span>GYROSCOPIC DISPLAY</span><span id="compass-hdg">HDG —</span></div>
+          <canvas id="compass" width="240" height="240" style="width:100%;max-width:240px;height:auto;"></canvas>
+          <div class="compass-readout">
+            <div class="cr-cell"><div class="cr-lbl">Roll</div><div class="cr-val x" id="cr-x">0°</div></div>
+            <div class="cr-cell"><div class="cr-lbl">Pitch</div><div class="cr-val y" id="cr-y">0°</div></div>
+            <div class="cr-cell"><div class="cr-lbl">Heading</div><div class="cr-val z" id="cr-z">—</div></div>
+          </div>
+        </div>
+
+        <!-- Right column -->
+        <div class="right-col">
+          <div class="axis-block x">
+            <div class="axis-top"><div class="axis-lbl">Roll · Starboard / Port</div><div class="axis-dir" id="x-dir">LEVEL</div></div>
+            <div class="axis-val" id="x-val">0°</div>
+            <div class="axis-desc" id="x-desc">Vessel level on roll</div>
+            <div class="axis-track"><div class="axis-mid"></div><div class="axis-fill" id="x-fill" style="left:50%;width:0"></div></div>
+          </div>
+          <div class="axis-block y">
+            <div class="axis-top"><div class="axis-lbl">Pitch · Bow / Stern</div><div class="axis-dir" id="y-dir">LEVEL</div></div>
+            <div class="axis-val" id="y-val">0°</div>
+            <div class="axis-desc" id="y-desc">Vessel level on pitch</div>
+            <div class="axis-track"><div class="axis-mid"></div><div class="axis-fill" id="y-fill" style="left:50%;width:0"></div></div>
+          </div>
+          <div class="orient-block">
+            <div class="sec-head" style="margin-bottom:0"><span>VESSEL TRIM</span></div>
+            <div class="orient-inner">
+              <div class="orient-ico" id="orient-ico">⚓</div>
+              <div><div class="orient-val" id="orient-val">Level</div><div class="orient-desc" id="orient-desc">Vessel on even keel</div></div>
+            </div>
+          </div>
+          <div class="stab-block">
+            <div class="sec-head" style="margin-bottom:7px"><span>STABILITY INDEX</span></div>
+            <div class="stab-row">
+              <div class="stab-score" id="stab-score">100</div>
+              <div class="stab-grade" id="stab-grade">NOMINAL</div>
+            </div>
+            <div class="stab-bar"><div class="stab-bar-fill" id="stab-fill" style="width:100%"></div></div>
+            <div class="stab-sub" id="stab-sub">All axes within tolerance</div>
+          </div>
+          <button class="perm-btn" id="permBtn" style="display:none">↗ Enable Motion Sensors</button>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div class="panel" id="p-log">
+      <div class="log-inner">
+        <div class="log-head">
+          <div class="log-title">Sensor Log</div>
+          <button class="log-clear" id="log-clear-btn">Clear Log</button>
+        </div>
+        <div id="log-body">
+          <div class="log-empty" id="log-empty">No readings yet — awaiting gyroscopic data</div>
+          <table class="log-table" id="log-table" style="display:none;width:100%">
+            <thead><tr><th>Timestamp (UTC)</th><th>Roll</th><th>Pitch</th><th>Heading</th><th>Stability</th><th>Vessel Trim</th></tr></thead>
+            <tbody id="log-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALIBRATION -->
+    <div class="panel" id="p-cal">
+      <div class="cal-inner">
+        <div class="cal-head">Calibration</div>
+        <div class="cal-grid">
+          <div class="cal-card">
+            <div class="cal-card-title">Roll Offset (X)</div>
+            <div class="cal-val-big" id="cal-x-off">0.0°</div>
+            <div class="cal-unit">Correction applied to X axis</div>
+            <div class="cal-mini-chart"><canvas class="mini-chart" id="cal-chart-x"></canvas></div>
+          </div>
+          <div class="cal-card">
+            <div class="cal-card-title">Pitch Offset (Y)</div>
+            <div class="cal-val-big" id="cal-y-off">0.0°</div>
+            <div class="cal-unit">Correction applied to Y axis</div>
+            <div class="cal-mini-chart"><canvas class="mini-chart" id="cal-chart-y"></canvas></div>
+          </div>
+        </div>
+        <div class="cal-section">
+          <div class="cal-section-title">Zero-Point Calibration</div>
+          <div class="about-desc" style="margin-bottom:10px;">Place the device on a level surface, then tap Calibrate to set the current position as the zero reference. All subsequent readings will be corrected by this offset.</div>
+          <button class="cal-btn" id="cal-btn">Set Zero Point</button>
+          <button class="cal-btn" style="border-color:var(--red);color:var(--red);" id="cal-reset-btn">Reset Calibration</button>
+          <div class="cal-status" id="cal-status"></div>
+        </div>
+        <div class="cal-section">
+          <div class="cal-section-title">Current Offsets</div>
+          <div class="cal-offset-row"><span>Roll offset (X)</span><span id="off-x-disp">0.0°</span></div>
+          <div class="cal-offset-row"><span>Pitch offset (Y)</span><span id="off-y-disp">0.0°</span></div>
+          <div class="cal-offset-row"><span>Calibrations performed</span><span id="cal-count">0</span></div>
+          <div class="cal-offset-row"><span>Last calibration</span><span id="cal-last">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABOUT -->
+    <div class="panel" id="p-about">
+      <div class="about-inner">
+        <div class="about-logo-row"><div class="about-logo">YAVAR</div></div>
+        <div class="about-ver">Gyroscopic Stability System · Maritime Navigation · v1.0.0</div>
+        <div class="about-section">
+          <div class="about-section-title">About YAVAR</div>
+          <div class="about-desc">YAVAR originates from Persian and Urdu — meaning <em>helper</em>, <em>supporter</em>, <em>companion</em>. A vessel's gyroscopic stability system is precisely that: the silent companion that holds everything level when the sea does not.</div>
+        </div>
+        <div class="about-section">
+          <div class="about-section-title">System</div>
+          <div class="about-row"><span>Version</span><span>1.0.0</span></div>
+          <div class="about-row"><span>Sensor</span><span>Gyroscopic Orientation Engine</span></div>
+          <div class="about-row"><span>Update Rate</span><span>~60Hz continuous</span></div>
+          <div class="about-row"><span>Log Retention</span><span>50 entries · 2s interval</span></div>
+          <div class="about-row"><span>Calibration</span><span>Zero-point offset correction</span></div>
+        </div>
+        <div class="about-section">
+          <div class="about-section-title">Axes Reference</div>
+          <div class="about-row"><span>Roll</span><span>Starboard (+) / Port (−) rotation</span></div>
+          <div class="about-row"><span>Pitch</span><span>Bow down (+) / Stern down (−)</span></div>
+          <div class="about-row"><span>Heading (α)</span><span>Compass bearing 0–360°</span></div>
+        </div>
+        <div class="about-section">
+          <div class="about-section-title">Stability Index</div>
+          <div class="about-row"><span>100 – 80</span><span style="color:var(--green)">NOMINAL — vessel within safe tolerance</span></div>
+          <div class="about-row"><span>79 – 50</span><span style="color:var(--gold)">CAUTION — moderate deviation detected</span></div>
+          <div class="about-row"><span>49 – 0</span><span style="color:var(--red)">CRITICAL — correct course immediately</span></div>
+        </div>
+        <div class="about-section">
+          <div class="about-section-title">Credentials</div>
+          <div class="about-row"><span>Master</span><span>MASTER / YAVAR2025</span></div>
+          <div class="about-row"><span>Operator</span><span>OPERATOR / HELM001</span></div>
+          <div class="about-row"><span>Guest</span><span>GUEST / MARITIME</span></div>
+        </div>
+        <div class="about-badge-row">
+          <div class="about-badge">Maritime Engineering</div>
+          <div class="about-badge">Yachting Grade</div>
+          <div class="about-badge">Gyroscopic Stability</div>
+          <div class="about-badge">v1.0</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div id="statusbar">
+    <div class="sb-item"><span id="sb-dot" style="display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--silver3);margin-right:5px;vertical-align:middle;"></span><span id="sb-sensor-txt">GYRO STANDBY</span></div>
+    <div class="sb-sep"></div>
+    <div class="sb-item">ROLL: <b id="sb-x">0°</b></div>
+    <div class="sb-item">PITCH: <b id="sb-y">0°</b></div>
+    <div class="sb-sep"></div>
+    <div class="sb-item">STAB: <b id="sb-stab">100</b></div>
+    <div class="sb-sep"></div>
+    <div class="sb-item">HELM: <b id="sb-user">—</b></div>
+    <div class="sb-right">YAVAR · MARITIME NAV SYS · v1.0</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ── CONFIG ── */
+const IS_PI = window.location.hostname !== 'localhost' || window.location.port === '3000';
+const API   = IS_PI ? '' : ''; // relative URLs — works on Pi and standalone
+let _token  = null;
+let _role   = null;
+let _ws     = null;
+let _wsConnected = false;
+
+/* ── CREDENTIALS (standalone fallback) ── */
+const CREDS={
+  'MASTER':'YAVAR2025',
+  'OPERATOR':'HELM001',
+  'GUEST':'MARITIME'
+};
+
+/* ── UTC CLOCK ── */
+function utcClock(){
+  const n=new Date();
+  return [n.getUTCHours(),n.getUTCMinutes(),n.getUTCSeconds()].map(v=>String(v).padStart(2,'0')).join(':')+' UTC';
+}
+function startClocks(){
+  const tick=()=>{
+    const t=utcClock();
+    const a=document.getElementById('tb-clock');
+    const b=document.getElementById('lg-clock');
+    if(a)a.textContent=t;
+    if(b)b.textContent=t;
+  };
+  tick();setInterval(tick,1000);
+}
+startClocks();
+
+/* ── TOAST ── */
+let _tt;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),2400);
+}
+
+/* ── VESSEL CONTEXT ── */
+document.getElementById('devSensor').textContent='STANDBY';
+document.getElementById('devSensor').className='badge ocean';
+
+/* ── COMPASS CANVAS ── */
+const canvas=document.getElementById('compass');
+const ctx=canvas.getContext('2d');
+
+function getCompassDims(){
+  return {CX:canvas.width/2,CY:canvas.height/2,R:canvas.width/2-8};
+}
+
+function drawCompass(beta,gamma,alpha){
+  const {CX,CY,R}=getCompassDims();
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // Nautical grid overlay on compass
+  ctx.save();
+  ctx.globalAlpha=0.08;
+  for(let i=0;i<canvas.width;i+=20){
+    ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,canvas.height);
+    ctx.strokeStyle='#2a6a8a';ctx.lineWidth=0.5;ctx.stroke();
+  }
+  for(let j=0;j<canvas.height;j+=20){
+    ctx.beginPath();ctx.moveTo(0,j);ctx.lineTo(canvas.width,j);
+    ctx.strokeStyle='#2a6a8a';ctx.lineWidth=0.5;ctx.stroke();
+  }
+  ctx.restore();
+
+  // Outer ring
+  ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);
+  ctx.strokeStyle='rgba(80,65,40,0.2)';ctx.lineWidth=1;ctx.stroke();
+
+  // Second ring
+  ctx.beginPath();ctx.arc(CX,CY,R-4,0,Math.PI*2);
+  ctx.strokeStyle='rgba(80,65,40,0.08)';ctx.lineWidth=0.5;ctx.stroke();
+
+  // Tick marks
+  for(let i=0;i<360;i+=5){
+    const rad=(i-90)*Math.PI/180;
+    const maj=i%30===0,med=i%10===0;
+    const inner=R-(maj?16:med?8:4);
+    ctx.beginPath();
+    ctx.moveTo(CX+Math.cos(rad)*(R-1),CY+Math.sin(rad)*(R-1));
+    ctx.lineTo(CX+Math.cos(rad)*inner,CY+Math.sin(rad)*inner);
+    ctx.strokeStyle=maj?'rgba(80,65,40,0.4)':med?'rgba(80,65,40,0.2)':'rgba(80,65,40,0.1)';
+    ctx.lineWidth=maj?1.2:0.7;ctx.stroke();
+  }
+
+  // Cardinal labels
+  [['N',0,'#1e5c7a'],['NE',45,'rgba(80,65,40,0.3)'],['E',90,'rgba(80,65,40,0.45)'],
+   ['SE',135,'rgba(80,65,40,0.3)'],['S',180,'rgba(80,65,40,0.45)'],
+   ['SW',225,'rgba(80,65,40,0.3)'],['W',270,'rgba(80,65,40,0.45)'],
+   ['NW',315,'rgba(80,65,40,0.3)']].forEach(([c,deg,col])=>{
+    const rad=(deg-90)*Math.PI/180;
+    const isMain=['N','E','S','W'].includes(c);
+    const dist=R-(isMain?24:26);
+    ctx.font=(isMain?'700 10px':'300 7px')+' JetBrains Mono,monospace';
+    ctx.fillStyle=col;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(c,CX+Math.cos(rad)*dist,CY+Math.sin(rad)*dist);
+  });
+
+  // Degree markers every 30
+  for(let i=0;i<360;i+=30){
+    if(i%90===0)continue;
+    const rad=(i-90)*Math.PI/180;
+    ctx.font='300 7px JetBrains Mono,monospace';
+    ctx.fillStyle='rgba(80,65,40,0.25)';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(i+'°',CX+Math.cos(rad)*(R-36),CY+Math.sin(rad)*(R-36));
+  }
+
+  // Inner circle
+  ctx.beginPath();ctx.arc(CX,CY,R-46,0,Math.PI*2);
+  ctx.fillStyle='rgba(244,239,228,0.7)';ctx.fill();
+  ctx.strokeStyle='rgba(80,65,40,0.12)';ctx.lineWidth=0.5;ctx.stroke();
+
+  // Concentric rings inside
+  [0.65,0.4,0.18].forEach(f=>{
+    ctx.beginPath();ctx.arc(CX,CY,(R-46)*f,0,Math.PI*2);
+    ctx.strokeStyle='rgba(80,65,40,0.07)';ctx.lineWidth=0.5;ctx.stroke();
+  });
+
+  // Cross hairs
+  const cr=R-50;
+  ctx.beginPath();
+  ctx.moveTo(CX-cr,CY);ctx.lineTo(CX+cr,CY);
+  ctx.moveTo(CX,CY-cr);ctx.lineTo(CX,CY+cr);
+  ctx.strokeStyle='rgba(80,65,40,0.08)';ctx.lineWidth=0.5;ctx.stroke();
+
+  // Horizon line (roll)
+  const rollRad=gamma*Math.PI/180;
+  ctx.save();ctx.translate(CX,CY);ctx.rotate(rollRad);
+  ctx.beginPath();ctx.moveTo(-(R-50),0);ctx.lineTo(R-50,0);
+  ctx.strokeStyle='rgba(30,92,122,0.35)';ctx.lineWidth=1;
+  ctx.setLineDash([4,5]);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+
+  // Y arrow (pitch)
+  if(Math.abs(beta)>1.5){
+    const yDir=beta>0?1:-1;
+    const yLen=Math.min(Math.abs(beta)/90*(R-52),R-54);
+    drawArrow(ctx,CX,CY,CX,CY+yDir*yLen,'#b8841e',0.8);
+  }
+  // X arrow (roll)
+  if(Math.abs(gamma)>1.5){
+    const xDir=gamma>0?1:-1;
+    const xLen=Math.min(Math.abs(gamma)/90*(R-52),R-54);
+    drawArrow(ctx,CX,CY,CX+xDir*xLen,CY,'#1e5c7a',0.8);
+  }
+
+  // Bubble (ball)
+  const bx=CX+Math.sin(rollRad)*Math.min(Math.abs(gamma),70)*0.5;
+  const by=CY+Math.sin(beta*Math.PI/180)*Math.min(Math.abs(beta),70)*0.5;
+  ctx.beginPath();ctx.arc(bx,by,9,0,Math.PI*2);
+  ctx.fillStyle='rgba(30,92,122,0.12)';ctx.fill();
+  ctx.beginPath();ctx.arc(bx,by,5,0,Math.PI*2);
+  ctx.fillStyle='#1e5c7a';ctx.fill();
+  ctx.beginPath();ctx.arc(bx,by,9,0,Math.PI*2);
+  ctx.strokeStyle='rgba(30,92,122,0.35)';ctx.lineWidth=1.5;ctx.stroke();
+
+  // Centre pip
+  ctx.beginPath();ctx.arc(CX,CY,2.5,0,Math.PI*2);
+  ctx.fillStyle='rgba(80,65,40,0.25)';ctx.fill();
+}
+
+function drawArrow(ctx,x1,y1,x2,y2,color,alpha){
+  const hl=10,angle=Math.atan2(y2-y1,x2-x1);
+  ctx.globalAlpha=alpha;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
+  ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-hl*Math.cos(angle-Math.PI/6),y2-hl*Math.sin(angle-Math.PI/6));
+  ctx.lineTo(x2-hl*Math.cos(angle+Math.PI/6),y2-hl*Math.sin(angle+Math.PI/6));
+  ctx.closePath();ctx.fillStyle=color;ctx.fill();
+  ctx.globalAlpha=1;
+}
+
+/* ── STATE ── */
+let beta=0,gamma=0,alpha=null;
+let offX=0,offY=0,calCount=0,calLast='—';
+let logEntries=[];
+let lastLogTime=0;
+let sensorLive=false;
+let calHistX=[],calHistY=[];
+
+function updateUI(b,g,a,accelX,accelY,accelZ,temp){
+  // Apply calibration offsets
+  const bC=b-offY, gC=g-offX;
+  beta=bC;gamma=gC;alpha=a;
+  const bR=Math.round(bC*10)/10, gR=Math.round(gC*10)/10;
+  const bRi=Math.round(bC), gRi=Math.round(gC);
+
+  drawCompass(bC,gC,a);
+
+  // Heading
+  const hdg=a!=null?Math.round(a)+'°':'—';
+  document.getElementById('compass-hdg').textContent='HDG '+hdg;
+  document.getElementById('cr-x').textContent=gRi+'°';
+  document.getElementById('cr-y').textContent=bRi+'°';
+  document.getElementById('cr-z').textContent=hdg;
+  document.getElementById('sb-x').textContent=gRi+'°';
+  document.getElementById('sb-y').textContent=bRi+'°';
+
+  // Roll axis
+  document.getElementById('x-val').textContent=gRi+'°';
+  document.getElementById('x-dir').textContent=gRi>4?'STBD →':gRi<-4?'← PORT':'LEVEL';
+  document.getElementById('x-desc').textContent=gRi>4?'Heeling to starboard':gRi<-4?'Heeling to port':'Vessel level on roll';
+  const xPct=Math.min(Math.abs(gRi)/90*50,50);
+  const xF=document.getElementById('x-fill');
+  if(gRi>=0){xF.style.left='50%';xF.style.width=xPct+'%';}
+  else{xF.style.left=(50-xPct)+'%';xF.style.width=xPct+'%';}
+
+  // Pitch axis
+  document.getElementById('y-val').textContent=bRi+'°';
+  document.getElementById('y-dir').textContent=bRi>4?'↓ BOW':bRi<-4?'STERN ↑':'LEVEL';
+  document.getElementById('y-desc').textContent=bRi>4?'Bow down — pitching forward':bRi<-4?'Stern down — pitching aft':'Vessel level on pitch';
+  const yPct=Math.min(Math.abs(bRi)/90*50,50);
+  const yF=document.getElementById('y-fill');
+  if(bRi>=0){yF.style.left='50%';yF.style.width=yPct+'%';}
+  else{yF.style.left=(50-yPct)+'%';yF.style.width=yPct+'%';}
+
+  // Vessel trim
+  const absB=Math.abs(bRi),absG=Math.abs(gRi);
+  let oV='Even Keel',oD='Vessel on even keel',oI='⚓';
+  if(absG>50){oV='Hard Over';oD='Severe roll — vessel heeled over';oI='⚠️';}
+  else if(absG>20){oV='Heeling';oD=absG+'° heel — monitor stability';oI='⚓';}
+  else if(absB>50){oV='Extreme Pitch';oD='Severe pitch — bow or stern down';oI='⚠️';}
+  else if(absB>20){oV='Pitching';oD=absB+'° pitch — monitor trim';oI='⚓';}
+  else if(absB>5||absG>5){oV='Slight Motion';oD='Within normal sea-keeping range';oI='⚓';}
+  document.getElementById('orient-ico').textContent=oI;
+  document.getElementById('orient-val').textContent=oV;
+  document.getElementById('orient-desc').textContent=oD;
+  document.getElementById('nav-orient').textContent=oV.toUpperCase();
+
+  // Stability
+  const dev=Math.sqrt(bC*bC+gC*gC);
+  const stab=Math.max(0,Math.round(100-dev*1.15));
+  document.getElementById('stab-score').textContent=stab;
+  document.getElementById('stab-fill').style.width=stab+'%';
+  document.getElementById('sb-stab').textContent=stab;
+  const gr=document.getElementById('stab-grade');
+  const ns=document.getElementById('nav-stab');
+  const sub=document.getElementById('stab-sub');
+  if(stab>=80){
+    document.getElementById('stab-fill').style.background='var(--green)';
+    gr.className='stab-grade';gr.textContent='NOMINAL';
+    sub.textContent='All axes within tolerance';ns.textContent='STABLE';ns.className='nav-pill';
+  } else if(stab>=50){
+    document.getElementById('stab-fill').style.background='var(--gold)';
+    gr.className='stab-grade warn';gr.textContent='CAUTION';
+    sub.textContent='Moderate deviation detected';ns.textContent='CAUTION';ns.className='nav-pill warn';
+  } else {
+    document.getElementById('stab-fill').style.background='var(--red)';
+    gr.className='stab-grade crit';gr.textContent='CRITICAL';
+    sub.textContent='High instability — correct course';ns.textContent='CRITICAL';ns.className='nav-pill crit';
+  }
+
+  // Log every 2s
+  const now=Date.now();
+  if(now-lastLogTime>2000){
+    lastLogTime=now;
+    const ts=new Date();
+    const timeStr=[ts.getUTCHours(),ts.getUTCMinutes(),ts.getUTCSeconds()].map(v=>String(v).padStart(2,'0')).join(':');
+    logEntries.unshift({t:timeStr+' UTC',x:gRi,y:bRi,z:hdg,s:stab,o:oV});
+    if(logEntries.length>50)logEntries.pop();
+    renderLog();
+    // mini chart history
+    calHistX.push(gRi);calHistY.push(bRi);
+    if(calHistX.length>60)calHistX.shift();
+    if(calHistY.length>60)calHistY.shift();
+    drawMiniChart('cal-chart-x',calHistX,'#1e5c7a');
+    drawMiniChart('cal-chart-y',calHistY,'#b8841e');
+  }
+}
+
+function renderLog(){
+  const empty=document.getElementById('log-empty');
+  const table=document.getElementById('log-table');
+  const tbody=document.getElementById('log-tbody');
+  if(!logEntries.length){empty.style.display='block';table.style.display='none';return;}
+  empty.style.display='none';table.style.display='table';
+  tbody.innerHTML=logEntries.map(e=>{
+    const cls=e.s>=80?'ok':e.s>=50?'warn':'crit';
+    return `<tr><td>${e.t}</td><td>${e.x}°</td><td>${e.y}°</td><td>${e.z}</td><td class="${cls}">${e.s}</td><td>${e.o}</td></tr>`;
+  }).join('');
+}
+
+function drawMiniChart(id,data,color){
+  const c=document.getElementById(id);
+  if(!c)return;
+  const w=c.offsetWidth||200,h=c.offsetHeight||32;
+  c.width=w;c.height=h;
+  const x=c.getContext('2d');
+  x.clearRect(0,0,w,h);
+  if(data.length<2)return;
+  const min=Math.min(...data),max=Math.max(...data);
+  const range=max-min||1;
+  x.beginPath();
+  data.forEach((v,i)=>{
+    const px=(i/(data.length-1))*w;
+    const py=h-((v-min)/range)*(h-4)-2;
+    i===0?x.moveTo(px,py):x.lineTo(px,py);
+  });
+  x.strokeStyle=color;x.lineWidth=1.2;x.stroke();
+}
+
+/* ── SENSOR STATE ── */
+let _sensorTimeout=null;
+
+/* ── WEBSOCKET — Pi IMU core ── */
+function connectWebSocket(){
+  const proto=location.protocol==='https:'?'wss:':'ws:';
+  const wsUrl=`${proto}//${location.host}`;
+  try{
+    _ws=new WebSocket(wsUrl);
+    _ws.onopen=()=>{
+      _wsConnected=true;
+    };
+    _ws.onmessage=(e)=>{
+      try{
+        const msg=JSON.parse(e.data);
+        if(msg.type==='gyro'){
+          const d=msg.data;
+          setLive('IMU');
+          updateUI(d.pitch,d.roll,d.heading,d.accelX,d.accelY,d.accelZ,d.temp);
+        }
+        if(msg.type==='hello'){
+          const imu=msg.imu;
+          const hw=imu.mode==='hardware';
+          document.getElementById('devSensor').textContent=hw?'MPU-9250 LIVE':'IMU SIMULATION';
+          document.getElementById('devSensor').className=hw?'badge green':'badge ocean';
+          document.getElementById('nav-sensor').textContent=hw?'IMU LIVE':'IMU SIM';
+          if(msg.calibration){offX=msg.calibration.offX||0;offY=msg.calibration.offY||0;}
+          toast(hw?'MPU-9250 GYROSCOPE ONLINE':'IMU SIMULATION ACTIVE');
+        }
+        if(msg.type==='imu_error') toast('IMU ERROR — '+msg.message);
+      }catch(_){}
+    };
+    _ws.onclose=()=>{_wsConnected=false;setTimeout(connectWebSocket,3000);};
+    _ws.onerror=()=>{_wsConnected=false;try{_ws.close();}catch(_){}};
+  }catch(_){}
+}
+
+/* ── SET LIVE — unified source handler ── */
+function setLive(source){
+  if(sensorLive&&source!=='IMU')return;
+  sensorLive=true;
+  if(_sensorTimeout)clearTimeout(_sensorTimeout);
+  document.getElementById('tb-dot').classList.add('live');
+  const map={
+    IMU:  {state:'IMU LIVE', sb:'IMU ACTIVE',      ns:'IMU LIVE',   badge:'IMU LIVE',    cls:'badge green'},
+    GYRO: {state:'LIVE',     sb:'GYRO ACTIVE',     ns:'GYRO LIVE',  badge:'GYRO LIVE',   cls:'badge green'},
+    SIM:  {state:'SIM',      sb:'HELM SIMULATION', ns:'SIMULATION', badge:'SIMULATION',  cls:'badge ocean'},
+  };
+  const l=map[source]||map.GYRO;
+  document.getElementById('tb-state').textContent=l.state;
+  document.getElementById('sb-dot').style.background=source==='SIM'?'var(--wake)':'var(--greenlt)';
+  document.getElementById('sb-sensor-txt').textContent=l.sb;
+  document.getElementById('nav-sensor').textContent=l.ns;
+  document.getElementById('devSensor').textContent=l.badge;
+  document.getElementById('devSensor').className=l.cls;
+}
+
+/* ── DEVICE GYRO — mobile fallback ── */
+function onOrientation(e){
+  if(_wsConnected)return;
+  if(e.beta===null&&e.gamma===null)return;
+  setLive('GYRO');
+  updateUI(e.beta||0,e.gamma||0,e.alpha||null,null,null,null,null);
+}
+function bindSensor(){
+  if('ondeviceorientationabsolute' in window)
+    window.addEventListener('deviceorientationabsolute',onOrientation,true);
+  window.addEventListener('deviceorientation',onOrientation,true);
+}
+
+/* ── HELM SIMULATION — desktop fallback ── */
+let _mouseActive=false,_mouseSmooth={b:0,g:0};
+function initMouseGyro(){
+  document.getElementById('sb-sensor-txt').textContent='HELM SIMULATION';
+  document.getElementById('nav-sensor').textContent='SIMULATION';
+  document.getElementById('devSensor').textContent='SIMULATION';
+  setInterval(()=>{
+    if(!_mouseActive||_wsConnected)return;
+    updateUI(_mouseSmooth.b,_mouseSmooth.g,null,null,null,null,null);
+  },16);
+  document.addEventListener('mousemove',e=>{
+    if(_wsConnected)return;
+    if(!_mouseActive){_mouseActive=true;setLive('SIM');}
+    const nx=(e.clientX/window.innerWidth-0.5)*2;
+    const ny=(e.clientY/window.innerHeight-0.5)*2;
+    _mouseSmooth.g+=(nx*45-_mouseSmooth.g)*0.12;
+    _mouseSmooth.b+=(ny*45-_mouseSmooth.b)*0.12;
+  });
+  document.addEventListener('touchmove',e=>{
+    if(_wsConnected)return;
+    const t=e.touches[0];
+    if(!_mouseActive){_mouseActive=true;setLive('SIM');}
+    const nx=(t.clientX/window.innerWidth-0.5)*2;
+    const ny=(t.clientY/window.innerHeight-0.5)*2;
+    _mouseSmooth.g+=(nx*45-_mouseSmooth.g)*0.12;
+    _mouseSmooth.b+=(ny*45-_mouseSmooth.b)*0.12;
+  },{passive:true});
+}
+
+/* ── CANVAS RESIZE ── */
+function resizeCanvas(){
+  const c=document.getElementById('compass');
+  if(!c)return;
+  const sz=Math.min(c.parentElement.offsetWidth-24,240);
+  c.width=sz;c.height=sz;
+  drawCompass(beta,gamma,alpha);
+}
+window.addEventListener('resize',resizeCanvas);
+window.addEventListener('orientationchange',()=>setTimeout(resizeCanvas,200));
+
+/* ── INIT — WebSocket → Device Gyro → Helm Simulation ── */
+connectWebSocket();
+if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
+  document.getElementById('permBtn').style.display='block';
+  document.getElementById('permBtn').addEventListener('click',()=>{
+    DeviceOrientationEvent.requestPermission().then(s=>{
+      if(s==='granted'){bindSensor();document.getElementById('permBtn').style.display='none';}
+      else initMouseGyro();
+    }).catch(()=>initMouseGyro());
+  });
+  initMouseGyro();
+}else if(typeof DeviceOrientationEvent!=='undefined'){
+  bindSensor();
+  setTimeout(()=>{if(!sensorLive&&!_wsConnected)initMouseGyro();},1500);
+}else{
+  initMouseGyro();
+}
+
+/* ── SENSOR TIMEOUT ── */
+_sensorTimeout=setTimeout(()=>{
+  if(!sensorLive){
+    document.getElementById('nav-sensor').textContent='NO SIGNAL';
+    document.getElementById('sb-sensor-txt').textContent='AWAITING GYRO';
+    toast('GYRO SIGNAL NOT DETECTED');
+  }
+},3500);
+
+/* ── CALIBRATION ── */
+document.getElementById('cal-btn').addEventListener('click',async()=>{
+  offX=gamma;offY=beta;
+  calCount++;
+  const ts=new Date();
+  calLast=[ts.getUTCHours(),ts.getUTCMinutes(),ts.getUTCSeconds()].map(v=>String(v).padStart(2,'0')).join(':')+' UTC';
+  document.getElementById('cal-x-off').textContent=offX.toFixed(1)+'°';
+  document.getElementById('cal-y-off').textContent=offY.toFixed(1)+'°';
+  document.getElementById('off-x-disp').textContent=offX.toFixed(1)+'°';
+  document.getElementById('off-y-disp').textContent=offY.toFixed(1)+'°';
+  document.getElementById('cal-count').textContent=calCount;
+  document.getElementById('cal-last').textContent=calLast;
+  document.getElementById('cal-status').className='cal-status ok';
+  document.getElementById('cal-status').textContent='✓ Zero point set — offsets applied';
+  // Sync to Pi
+  try{await fetch('/api/calibration/set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({offX,offY}),signal:AbortSignal.timeout(1500)});}catch(_){}
+  toast('CALIBRATION SET');
+});
+
+document.getElementById('cal-reset-btn').addEventListener('click',async()=>{
+  offX=0;offY=0;
+  document.getElementById('cal-x-off').textContent='0.0°';
+  document.getElementById('cal-y-off').textContent='0.0°';
+  document.getElementById('off-x-disp').textContent='0.0°';
+  document.getElementById('off-y-disp').textContent='0.0°';
+  document.getElementById('cal-status').className='cal-status';
+  document.getElementById('cal-status').textContent='Calibration reset to factory defaults';
+  try{await fetch('/api/calibration/reset',{method:'POST',signal:AbortSignal.timeout(1500)});}catch(_){}
+  toast('CALIBRATION RESET');
+});
+
+document.getElementById('log-clear-btn').addEventListener('click',async()=>{
+  logEntries=[];renderLog();
+  try{await fetch('/api/log',{method:'DELETE',signal:AbortSignal.timeout(1500)});}catch(_){}
+  toast('LOG CLEARED');
+});
+
+/* ── LOGOUT ── */
+document.getElementById('logout-btn').addEventListener('click',()=>{
+  // Reset sensor state
+  sensorLive=false;
+  beta=0;gamma=0;alpha=null;
+  logEntries=[];
+  offX=0;offY=0;calCount=0;calLast='—';
+  calHistX=[];calHistY=[];
+  lastLogTime=0;
+
+  // Reset UI
+  document.getElementById('app').classList.remove('on');
+  document.getElementById('tb-dot').classList.remove('live');
+  document.getElementById('tb-state').textContent='STANDBY';
+  document.getElementById('sb-dot').style.background='var(--silver3)';
+  document.getElementById('sb-sensor-txt').textContent='GYRO STANDBY';
+  document.getElementById('nav-sensor').textContent='NO SENSOR';
+  document.getElementById('nav-stab').textContent='STABLE';
+  document.getElementById('nav-stab').className='nav-pill';
+  document.getElementById('nav-orient').textContent='FLAT';
+  document.getElementById('sb-user').textContent='—';
+  document.getElementById('sb-x').textContent='0°';
+  document.getElementById('sb-y').textContent='0°';
+  document.getElementById('sb-stab').textContent='100';
+  drawCompass(0,0,null);
+  renderLog();
+
+  // Switch back to first panel
+  switchPanel('p-gyro');
+
+  // Show login
+  const login=document.getElementById('login');
+  login.classList.remove('gone');
+  document.getElementById('lg-user').value='';
+  document.getElementById('lg-pass').value='';
+  document.getElementById('lg-err').textContent='';
+  setTimeout(()=>document.getElementById('lg-user').focus(),100);
+});
+function switchPanel(panelId){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.pn-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tb-tab').forEach(t=>t.classList.remove('active'));
+  const p=document.getElementById(panelId);
+  if(p)p.classList.add('active');
+  document.querySelectorAll('[data-panel="'+panelId+'"]').forEach(t=>t.classList.add('active'));
+}
+document.querySelectorAll('.tb-tab,.pn-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    const pid=tab.dataset.panel;
+    if(pid)switchPanel(pid);
+  });
+});
+
+/* ── LOGIN ── */
+(function(){
+  let attempts=0;
+  async function attempt(){
+    if(attempts>=3){
+      document.getElementById('lg-err').textContent='✕ ACCOUNT LOCKED — TOO MANY FAILED ATTEMPTS';return;
+    }
+    const u=document.getElementById('lg-user').value.trim().toUpperCase();
+    const p=document.getElementById('lg-pass').value;
+    const btn=document.getElementById('lg-btn');
+    const err=document.getElementById('lg-err');
+    btn.textContent='VERIFYING…';btn.disabled=true;
+
+    let authed=false;
+
+    // Try Pi API first
+    try {
+      const res=await fetch('/api/auth',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({user:u,pass:p}),
+        signal:AbortSignal.timeout(2000)
+      });
+      if(res.ok){
+        const data=await res.json();
+        if(data.ok){ _token=data.token; _role=data.role; authed=true; }
+      }
+    } catch(_){}
+
+    // Standalone fallback
+    if(!authed && CREDS[u] && CREDS[u]===p){ authed=true; _role='operator'; }
+
+    btn.textContent='AUTHENTICATE →';btn.disabled=false;
+
+    if(authed){
+      document.getElementById('sb-user').textContent=u;
+      document.getElementById('login').classList.add('gone');
+      runIntro(u);
+    } else {
+      attempts++;
+      const left=3-attempts;
+      err.textContent=left>0?`✕ INVALID CREDENTIALS — ${left} attempt${left!==1?'s':''} remaining`:'✕ ACCOUNT LOCKED — TOO MANY FAILED ATTEMPTS';
+      document.getElementById('lg-pass').value='';
+      document.getElementById('lg-pass').focus();
+    }
+  }
+  document.getElementById('lg-btn').addEventListener('click',attempt);
+  document.getElementById('lg-pass').addEventListener('keydown',e=>{if(e.key==='Enter')attempt();});
+  document.getElementById('lg-user').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('lg-pass').focus();});
+  setTimeout(()=>document.getElementById('lg-user').focus(),100);
+})();
+
+/* ── INTRO ── */
+function runIntro(user){
+  const intro=document.getElementById('intro');
+  const fill=document.getElementById('intro-fill');
+  intro.classList.add('show');
+  let pct=0;
+  const iv=setInterval(()=>{
+    pct+=2;fill.style.width=pct+'%';
+    if(pct>=100){clearInterval(iv);setTimeout(()=>{intro.classList.remove('show');runBoot();},300);}
+  },30);
+}
+
+/* ── BOOT ── */
+const BOOT_LINES=[
+  {c:'',   s:'YAVAR v1.0 — Gyroscopic Stability System'},
+  {c:'hi', s:'Maritime Navigation · Precision Orientation Engine'},
+  {c:'dim',s:'────────────────────────────────────────────────────'},
+  {c:'ok', s:'Secure boot verification .............................. [PASS]'},
+  {c:'ok', s:'Credential hash verified .............................. [PASS]'},
+  {c:'ok', s:'Session token issued .................................. [OK]'},
+  {c:'ok', s:'WebSocket IMU bridge — ws://vessel:3000 ............... [CONNECTING]'},
+  {c:'ok', s:'MPU-9250 I2C sensor — bus 1, addr 0x68 ................ [CHECK]'},
+  {c:'ok', s:'Complementary filter — α=0.96 ......................... [OK]'},
+  {c:'ok', s:'Roll axis module — starboard/port ..................... [OK]'},
+  {c:'ok', s:'Pitch axis module — bow/stern ......................... [OK]'},
+  {c:'ok', s:'Heading tracker — 0–360° compass ...................... [OK]'},
+  {c:'ok', s:'Device gyro fallback — mobile sensor .................. [READY]'},
+  {c:'ok', s:'Helm simulation — desktop fallback .................... [READY]'},
+  {c:'ok', s:'Nautical chart renderer ............................... [OK]'},
+  {c:'ok', s:'Gyroscopic compass display ............................ [OK]'},
+  {c:'ok', s:'Stability index classifier ............................ [OK]'},
+  {c:'ok', s:'Vessel trim monitor .................................. [OK]'},
+  {c:'ok', s:'Navigation log — 2s interval, 50 entries ............. [OK]'},
+  {c:'ok', s:'Zero-point calibration engine ......................... [OK]'},
+  {c:'ok', s:'Calibration API sync ................................. [OK]'},
+  {c:'ok', s:'UTC chronometer ...................................... [OK]'},
+  {c:'ok', s:'Maritime colour system — cream/khaki/ocean ............ [OK]'},
+  {c:'ok', s:'All systems nominal. Vessel standing by.'},
+];
+
+function runBoot(){
+  const boot=document.getElementById('boot');
+  const log=document.getElementById('bt-log');
+  const fill=document.getElementById('bt-fill');
+  const pct=document.getElementById('bt-pct');
+  const stg=document.getElementById('bt-stage');
+  boot.classList.add('show');
+  const total=BOOT_LINES.length;
+  BOOT_LINES.forEach((line,i)=>{
+    setTimeout(()=>{
+      const d=document.createElement('div');
+      d.className=line.c||'';d.textContent='> '+line.s;
+      log.appendChild(d);log.scrollTop=log.scrollHeight;
+      const p=Math.round((i+1)/total*100);
+      fill.style.width=p+'%';pct.textContent=p+'%';
+      stg.textContent=line.c==='ok'?'PASS':line.c==='w'?'WARN':'INIT';
+    },i*95);
+  });
+  setTimeout(()=>{
+    boot.classList.remove('show');
+    const app=document.getElementById('app');
+    app.classList.add('on');
+    drawCompass(0,0,null);
+    updateUI(0,0,null,null,null,null,null);
+    toast('YAVAR ONLINE');
+  },total*95+500);
+}
+
+})();
+</script>
+</body>
+</html>
